@@ -25,6 +25,69 @@ a formatted Excel file ready for AMS import.
 
 ---
 
+## User & Business Process
+
+### Persona: Account Manager / Producer at a B&B office
+Owns a book of ~150–300 client relationships. Most of the day is renewals, endorsement
+requests, and fielding "what if" coverage questions — often on policies they didn't
+originally write, for clients in industries they don't deeply specialize in.
+
+### Mode A — Scenario Stress Test ("what if" / reactive)
+
+| | Today (manual) | With the agent |
+|---|---|---|
+| **Trigger** | Client calls/emails: "what if X happens — are we covered?" | Same trigger — AM opens the copilot |
+| **Process** | AM pulls the 40+ page policy PDF, manually searches for the relevant exclusion/endorsement, often doesn't think to also check this client's claims history or carrier-specific patterns, frequently escalates "to be safe" | AM types the scenario in plain English. Agent retrieves THIS client's policy + claims/risk-flag history + carrier risk patterns + playbook, cross-references all three, returns a verdict (COVERED / CONDITIONAL / LIKELY_DENIED) with confidence, cited policy language, and a recommended action |
+| **Time** | 30–60 min, sometimes days if escalated | Under 30 seconds |
+| **Output** | Verbal/email answer, rarely documented | Structured verdict + logged decision (Accept / Flag for Review / Escalate to Attorney) |
+
+**Business process tie-in:** The decision log becomes part of the client file — a
+timestamped record that the AM reviewed the question against current policy language
+*and* the client's actual history. That's the AM's own E&O defense file if the handling
+of the question is ever questioned later.
+
+### Mode B — Coverage Audit (proactive / renewal prep)
+
+| | Today (manual) | With the agent |
+|---|---|---|
+| **Trigger** | 60–90 days before renewal, or after a significant claim | Same trigger — part of the renewal prep checklist |
+| **Process** | AM (or a junior teammate) works through a generic checklist; quality varies a lot by tenure, and gaps specific to this client's industry/claims history are often missed | One click → agent audits the client's actual policy against their industry's known E&O loss patterns, their own claims history, and the playbook for that policy type; returns a ranked risk list (severity, E&O frequency data, "what could go wrong," fix) |
+| **Time** | 1–3 hours, quality-dependent | Under a minute |
+| **Output** | Internal notes, maybe a renewal memo | Ranked risk list + immediate actions — becomes the literal agenda for the renewal conversation |
+
+**Business process tie-in:** Surfaced gaps map directly to endorsement/upsell conversations
+(higher limits, additional insured, MTC, etc.) — a revenue lever, not just risk reduction.
+It also standardizes audit quality across a brokerage that's grown largely through
+acquisition of independently-run agencies with inconsistent processes.
+
+---
+
+## Expected Outcomes
+
+**For the broker (AM/producer):**
+- Seconds instead of hours for "what if" questions and renewal audits
+- Every answer grounded in *this client's* actual policy + history, not generic advice
+- A documented decision trail for every judgment call (compliance + E&O defense)
+
+**For Brown & Brown (the business):**
+- **E&O loss ratio** — catching repeat exposures (e.g., the $47K E&O pattern surfaced for
+  Meridian Freight in both demo scenarios) *before* they recur is directly tied to B&B's
+  own E&O insurance costs; B&B is the one that gets sued when a broker misses something
+- **Consistency at scale** — B&B has grown through dozens of acquisitions; this gives every
+  office the same institutional-knowledge-grounded review, regardless of the legacy
+  agency's prior process maturity
+- **Revenue** — proactive audit findings become endorsement/upsell conversations at renewal
+- **Client retention** — faster, more confident answers to coverage questions build trust
+  and reduce E&O exposure for the client too, which reflects on B&B
+
+**For this interview specifically:**
+This demo deliberately mirrors a real FDE engagement: find the actual broker workflow
+(not a generic chatbot), ground every output in the client's real data + institutional
+knowledge, keep a human decision-maker in the loop (regulatory requirement), and design
+the integration to slot into the tools brokers already use (Teams/Copilot Studio).
+
+---
+
 ## Architecture
 
 ```
