@@ -70,7 +70,7 @@ TOOLS = [
                     "type": "string",
                     "description": "The policy ID to search within. REQUIRED in audit mode. E.g. CA0001-2013, CG0001-2007"
                 },
-                "section_filter": {
+                "section_type": {
                     "type": "string",
                     "description": "Optional: filter by section type. One of: exclusions, conditions, insuring_agreement, definitions, declarations, endorsement"
                 },
@@ -255,7 +255,7 @@ def _embed(text: str) -> list:
 
 
 def retrieve_policy_clauses(query: str, policy_id: str = None,
-                            section_filter: str = None, top_k: int = 4) -> dict:
+                            section_type: str = None, top_k: int = 4) -> dict:
     vector = _embed(query)
     vector_query = VectorizedQuery(
         vector=vector,
@@ -266,8 +266,8 @@ def retrieve_policy_clauses(query: str, policy_id: str = None,
     filters = []
     if policy_id:
         filters.append(f"policy_id eq '{policy_id}'")
-    if section_filter:
-        filters.append(f"section_type eq '{section_filter}'")
+    if section_type:
+        filters.append(f"section_type eq '{section_type}'")
     filter_str = " and ".join(filters) if filters else None
 
     results = list(policy_search.search(
