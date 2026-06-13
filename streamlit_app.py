@@ -48,6 +48,26 @@ from indexing.index_policy import index_policy
 
 st.set_page_config(page_title="B&B Coverage Advisor", page_icon="🛡️", layout="centered")
 
+# Lightweight shared-password gate — this app is public and makes live calls
+# to paid Claude / Azure services, so we don't want it wide open to anyone
+# who stumbles on the URL. Set APP_PASSWORD in the Streamlit Cloud secrets
+# to override the default.
+try:
+    _app_password = st.secrets.get("APP_PASSWORD", "sunflower")
+except Exception:
+    _app_password = "sunflower"
+
+if not st.session_state.get("authenticated"):
+    st.title("🛡️ B&B Coverage Advisor")
+    pw = st.text_input("Password", type="password")
+    if pw:
+        if pw == _app_password:
+            st.session_state["authenticated"] = True
+            st.rerun()
+        else:
+            st.error("Incorrect password.")
+    st.stop()
+
 st.title("🛡️ B&B Coverage Advisor")
 st.caption(
     "AI-powered coverage stress testing — every finding is grounded in retrieved policy "
