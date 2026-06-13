@@ -1,0 +1,49 @@
+playbook_id: commercial_auto_v1
+policy_type: commercial_auto
+description: Standard stress test scenarios for commercial auto policies (CA 00 01)
+
+mandatory_scenarios:
+  - id: radius_restriction
+    name: "Out-of-radius operation"
+    scenario: "A scheduled driver operates a covered vehicle beyond the stated radius of operations and causes a liability loss."
+    priority: HIGH
+    why: "Radius restrictions are strictly enforced. Most CA 00 01 forms exclude coverage outside stated territory without endorsement CA 01 21."
+
+  - id: unlisted_driver
+    name: "Unlisted driver — permissive use"
+    scenario: "An employee not listed on the driver schedule operates a covered vehicle with verbal permission and causes an accident."
+    priority: HIGH
+    why: "Many carrier manuscript forms restrict coverage to scheduled drivers only, overriding standard permissive use language."
+
+  - id: cdl_class_mismatch
+    name: "Driver operating outside CDL class"
+    scenario: "A driver holding a Class B CDL operates a vehicle requiring a Class A CDL and causes a collision."
+    priority: HIGH
+    why: "License class mismatch gives the carrier grounds to deny on the basis of unqualified operator."
+
+  - id: vehicle_use_classification
+    name: "Vehicle used outside rated classification"
+    scenario: "A vehicle rated for local delivery is used for long-haul interstate freight. A loss occurs during that trip."
+    priority: MEDIUM
+    why: "Use classification determines rated exposure. Out-of-class use can void coverage or trigger a coverage dispute."
+
+  - id: hired_non_owned_gap
+    name: "Employee personal vehicle — HNOA gap"
+    scenario: "An employee uses their personal vehicle on company business and causes an at-fault accident. No HNOA coverage on the CA policy."
+    priority: HIGH
+    why: "HNOA is frequently omitted on small fleet policies. Creates uninsured employer liability exposure."
+
+conditional_scenarios:
+  - id: cargo_theft
+    applies_when: "policy includes motor truck cargo endorsement"
+    name: "Cargo theft from unattended vehicle"
+    scenario: "Cargo is stolen overnight from a parked trailer left unattended at an unsecured lot for 10+ hours."
+    priority: MEDIUM
+    why: "Many cargo forms exclude theft from unattended vehicles or require specific security conditions."
+
+  - id: non_listed_territory
+    applies_when: "policy has a listed territory of operations"
+    name: "Loss in non-listed state"
+    scenario: "A covered vehicle operates in a state not listed in the territory of operations and causes a loss."
+    priority: HIGH
+    why: "Territory restrictions are absolute in many forms. Operating outside listed states can void coverage entirely."

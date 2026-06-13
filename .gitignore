@@ -1,0 +1,11 @@
+.venv/
+__pycache__/
+*.pyc
+.env
+local.settings.json
+last_result.json
+
+# Azure Functions
+bin/
+obj/
+.python_packages/

@@ -1,0 +1,36 @@
+playbook_id: claims_made_v1
+policy_type: claims_made
+description: Stress test scenarios specific to claims-made policy structures (E&O, D&O, EPLI, Cyber, Professional Liability)
+
+mandatory_scenarios:
+  - id: retroactive_date_gap
+    name: "Retroactive date — prior acts not covered"
+    scenario: "Insured switches carriers at renewal. New policy retroactive date is set to today, not to the original inception date. A claim is made for work performed 18 months ago."
+    priority: CRITICAL
+    why: "Retroactive date misalignment is the single most common cause of E&O claims against brokers on claims-made policies. Must always match original inception."
+
+  - id: tail_coverage_omission
+    name: "No tail coverage on cancellation"
+    scenario: "Claims-made policy is cancelled mid-term. Insured is not advised of extended reporting period (ERP/tail) option. A claim is filed 6 months after cancellation for a prior act."
+    priority: CRITICAL
+    why: "Failure to advise the insured of ERP options at cancellation or non-renewal is a leading E&O exposure for brokers."
+
+  - id: late_notice_of_claim
+    name: "Late notice — claim reported outside policy period"
+    scenario: "An incident occurs during the policy period but the insured does not report it to the carrier until after the policy has expired and no tail was purchased."
+    priority: HIGH
+    why: "Claims-made requires both the act AND the claim to occur within the policy period or reporting window. Late notice can void coverage."
+
+  - id: known_circumstance
+    name: "Known circumstance not disclosed at renewal"
+    scenario: "Insured was aware of a potential claim situation before renewal but did not disclose it on the application. Claim arises after renewal."
+    priority: HIGH
+    why: "Most claims-made applications require disclosure of known circumstances. Non-disclosure can trigger rescission."
+
+conditional_scenarios:
+  - id: prior_pending_exclusion
+    applies_when: "policy contains prior and pending litigation exclusion"
+    name: "Prior and pending litigation exclusion"
+    scenario: "A claim is filed that relates to litigation that was pending before the policy inception date."
+    priority: HIGH
+    why: "Prior and pending exclusions are often broader than insureds realize — applies to related claims, not just identical ones."

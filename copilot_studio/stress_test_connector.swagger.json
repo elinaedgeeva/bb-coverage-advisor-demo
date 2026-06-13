@@ -1,0 +1,148 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "title": "BB Coverage Stress Tester",
+    "description": "Coverage stress-test agent for Brown & Brown policies, backed by Azure AI Search + Anthropic Claude.",
+    "version": "1.0"
+  },
+  "host": "bb-coverage-stress-tester.azurewebsites.net",
+  "basePath": "/api",
+  "schemes": ["https"],
+  "consumes": ["application/json"],
+  "produces": ["application/json"],
+  "paths": {
+    "/stress_test": {
+      "post": {
+        "summary": "Run a coverage stress test",
+        "description": "Runs the coverage stress-test agent in 'scenario' or 'audit' mode against an indexed policy and returns a structured verdict.",
+        "operationId": "StressTest",
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/StressTestRequest"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Verdict",
+            "schema": {
+              "$ref": "#/definitions/StressTestResponse"
+            }
+          }
+        }
+      }
+    },
+    "/policies": {
+      "get": {
+        "summary": "List indexed policies",
+        "description": "Returns the list of policy IDs and form numbers currently indexed in AI Search.",
+        "operationId": "GetPolicies",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Policy list",
+            "schema": {
+              "$ref": "#/definitions/PolicyListResponse"
+            }
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "StressTestRequest": {
+      "type": "object",
+      "properties": {
+        "mode": {
+          "type": "string",
+          "enum": ["scenario", "audit"],
+          "default": "scenario",
+          "description": "scenario = answer a 'what if' claim question for a specific client. audit = proactively review a client's policy for gaps."
+        },
+        "scenario": {
+          "type": "string",
+          "description": "Free-text claim scenario / what-if question (required in scenario mode)"
+        },
+        "client_id": {
+          "type": "string",
+          "default": "DEMO-CLIENT-001",
+          "description": "The client whose policy and history this is evaluated against (scenario mode). Defaults to DEMO-CLIENT-001."
+        },
+        "policy_type": {
+          "type": "string",
+          "description": "e.g. commercial_auto, general_liability, workers_comp (required in audit mode)"
+        },
+        "policy_id": {
+          "type": "string",
+          "description": "e.g. CA0001-2013 (required in audit mode)"
+        },
+        "industry": {
+          "type": "string",
+          "description": "Industry context for audit mode, e.g. trucking"
+        }
+      },
+      "required": ["mode"]
+    },
+    "Finding": {
+      "type": "object",
+      "properties": {
+        "type": { "type": "string" },
+        "clause_reference": { "type": "string" },
+        "policy_language": { "type": "string" },
+        "implication": { "type": "string" },
+        "severity": { "type": "string" }
+      }
+    },
+    "StressTestResponse": {
+      "type": "object",
+      "properties": {
+        "scenario_summary": { "type": "string" },
+        "policy_type": { "type": "string" },
+        "client_id": { "type": "string" },
+        "policy_id": { "type": "string" },
+        "verdict": { "type": "string" },
+        "confidence": { "type": "number" },
+        "findings": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/Finding" }
+        },
+        "recommended_action": { "type": "string" },
+        "human_review_required": { "type": "boolean" },
+        "human_review_reason": { "type": "string" },
+        "knowledge_gaps": { "type": "string" },
+        "error": { "type": "string" }
+      }
+    },
+    "Policy": {
+      "type": "object",
+      "properties": {
+        "policy_id": { "type": "string" },
+        "form_number": { "type": "string" }
+      }
+    },
+    "PolicyListResponse": {
+      "type": "object",
+      "properties": {
+        "count": { "type": "integer" },
+        "policies": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/Policy" }
+        }
+      }
+    }
+  },
+  "securityDefinitions": {
+    "function_key": {
+      "type": "apiKey",
+      "in": "query",
+      "name": "code"
+    }
+  },
+  "security": [
+    { "function_key": [] }
+  ]
+}

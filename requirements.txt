@@ -1,0 +1,13 @@
+openai
+anthropic
+azure-ai-projects
+azure-ai-documentintelligence
+azure-search-documents
+azure-storage-blob
+azure-identity
+azure-functions
+python-dotenv
+pyyaml
+openpyxl
+tiktoken
+streamlit

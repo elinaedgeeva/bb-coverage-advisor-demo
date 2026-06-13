@@ -1,0 +1,42 @@
+playbook_id: general_liability_v1
+policy_type: general_liability
+description: Stress test scenarios for commercial general liability policies (CG 00 01)
+
+mandatory_scenarios:
+  - id: pollution_exclusion
+    name: "Pollution exclusion — absolute vs. sudden and accidental"
+    scenario: "A fuel spill during delivery operations causes property damage to a third party. The CG 00 01 contains an absolute pollution exclusion."
+    priority: HIGH
+    why: "Absolute pollution exclusion is broader than most insureds realize. Courts have applied it to situations beyond environmental contamination."
+
+  - id: your_work_exclusion
+    name: "Your work / completed operations gap"
+    scenario: "A contractor completes a roofing job. Six months later the roof leaks and causes interior property damage. The insured's GL policy excludes damage to 'your work'."
+    priority: HIGH
+    why: "The your-work exclusion eliminates coverage for the contractor's own work product. Completed operations coverage must be specifically confirmed."
+
+  - id: contractual_liability
+    name: "Contractual liability — assumed in contract"
+    scenario: "Insured signed an indemnification agreement holding a property owner harmless. A third party is injured and the property owner tenders defense to the insured."
+    priority: MEDIUM
+    why: "GL covers contractual liability only for insured contracts. Broad indemnification agreements may fall outside the definition."
+
+  - id: employee_exclusion
+    name: "Employee bodily injury — workers comp gap"
+    scenario: "An employee is injured on a job site and sues the employer directly rather than filing a workers comp claim. The GL policy excludes employee bodily injury."
+    priority: HIGH
+    why: "GL excludes bodily injury to employees. Employers liability coverage under the WC policy is the correct coverage — confirm it is in force."
+
+  - id: professional_services
+    name: "Professional services exclusion"
+    scenario: "An insured provides consulting advice that leads to a client's financial loss. Client sues under GL policy."
+    priority: MEDIUM
+    why: "Standard CG 00 01 excludes professional services. E&O or professional liability coverage is required for advice-based exposures."
+
+conditional_scenarios:
+  - id: subcontractor_work
+    applies_when: "insured uses subcontractors"
+    name: "Subcontractor work — your work exclusion extension"
+    scenario: "Damage arises from a subcontractor's faulty work that was incorporated into the insured's completed project."
+    priority: HIGH
+    why: "Without a subcontractor exception endorsement, damage caused by subcontracted work may be excluded under the your-work exclusion."

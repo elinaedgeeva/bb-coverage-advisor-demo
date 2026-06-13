@@ -1,0 +1,84 @@
+{
+  "type": "AdaptiveCard",
+  "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
+  "version": "1.5",
+  "body": [
+    {
+      "type": "TextBlock",
+      "text": "Coverage Stress Test Result",
+      "weight": "Bolder",
+      "size": "Large"
+    },
+    {
+      "type": "TextBlock",
+      "text": "${scenario_summary}",
+      "wrap": true,
+      "spacing": "Small"
+    },
+    {
+      "type": "FactSet",
+      "facts": [
+        { "title": "Verdict", "value": "${verdict}" },
+        { "title": "Confidence", "value": "${confidence}" },
+        { "title": "Human review required?", "value": "${if(human_review_required, 'YES', 'No')}" }
+      ]
+    },
+    {
+      "type": "TextBlock",
+      "text": "Findings",
+      "weight": "Bolder",
+      "size": "Medium",
+      "spacing": "Medium"
+    },
+    {
+      "type": "Container",
+      "$data": "${findings}",
+      "spacing": "Small",
+      "items": [
+        {
+          "type": "TextBlock",
+          "text": "**[${severity}] ${clause_reference}**",
+          "wrap": true
+        },
+        {
+          "type": "TextBlock",
+          "text": "${implication}",
+          "wrap": true,
+          "isSubtle": true,
+          "size": "Small"
+        }
+      ]
+    },
+    {
+      "type": "TextBlock",
+      "text": "Recommended Action",
+      "weight": "Bolder",
+      "size": "Medium",
+      "spacing": "Medium"
+    },
+    {
+      "type": "TextBlock",
+      "text": "${recommended_action}",
+      "wrap": true
+    },
+    {
+      "type": "TextBlock",
+      "text": "Why human review is needed",
+      "weight": "Bolder",
+      "size": "Medium",
+      "spacing": "Medium",
+      "isVisible": "${human_review_required}"
+    },
+    {
+      "type": "TextBlock",
+      "text": "${human_review_reason}",
+      "wrap": true,
+      "isVisible": "${human_review_required}"
+    }
+  ],
+  "actions": [
+    { "type": "Action.Submit", "title": "Accept", "data": { "decision": "accept" } },
+    { "type": "Action.Submit", "title": "Flag for Review", "data": { "decision": "flag_for_review" } },
+    { "type": "Action.Submit", "title": "Escalate to Attorney", "data": { "decision": "escalate_attorney" } }
+  ]
+}
