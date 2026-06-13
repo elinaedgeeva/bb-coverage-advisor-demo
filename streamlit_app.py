@@ -14,7 +14,16 @@ Run with:
     streamlit run streamlit_app.py
 """
 
+import os
+
 import streamlit as st
+
+# On Streamlit Community Cloud, secrets are configured via the dashboard
+# (st.secrets) rather than a .env file. Mirror them into os.environ so the
+# existing dotenv-based clients (agents/stress_tester.py, services/llm_client.py)
+# work unchanged both locally and when deployed.
+for _k, _v in st.secrets.items():
+    os.environ.setdefault(_k, str(_v))
 
 from agents.stress_tester import run_stress_test, run_coverage_audit, retrieve_client_history
 from run_test import SCENARIOS

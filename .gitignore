@@ -2,6 +2,7 @@
 __pycache__/
 *.pyc
 .env
+streamlit_secrets.toml
 local.settings.json
 last_result.json
 
