@@ -1,0 +1,66 @@
+{
+  "client_id": "DEMO-CLIENT-002",
+  "client_name": "Sonoma Builders Group LLC",
+  "industry": "construction",
+  "years_as_client": 4,
+  "annual_premium": 142800,
+  "primary_policy_type": "general_liability",
+  "employee_count": 38,
+  "policy_history": [
+    {
+      "policy_year": "2024-2025",
+      "carrier": "Liberty Mutual",
+      "policy_id": "CG0001-2013",
+      "premium": 142800,
+      "operations_description": "General contractor - residential remodel and ADU construction, uses subcontractors for electrical, plumbing, and roofing",
+      "renewal_notes": "Subcontractor usage increased roughly 30% year over year. No additional-insured endorsements added for the new subcontractors."
+    },
+    {
+      "policy_year": "2023-2024",
+      "carrier": "Liberty Mutual",
+      "premium": 128500,
+      "operations_description": "General contractor - residential remodel",
+      "renewal_notes": "Clean renewal. No changes to operations disclosed."
+    }
+  ],
+  "claims_history": [
+    {
+      "claim_id": "CLM-2023-0512",
+      "date": "2023-08-30",
+      "type": "completed_operations",
+      "description": "Homeowner reported water damage 8 months after a bathroom remodel was completed, alleging faulty plumbing installation by a subcontractor.",
+      "status": "DENIED",
+      "denial_reason": "The plumbing subcontractor was uninsured at the time of the work and no certificate of insurance was on file. Carrier denied under the independent contractors exclusion because the insured had not added the subcontractor as an additional insured.",
+      "paid_amount": 0,
+      "reserve": 0,
+      "broker_action": "Coverage dispute filed. Insured pursued the subcontractor directly but the subcontractor had no recoverable assets. Insured absorbed the $62,000 repair cost out of pocket. Broker flagged for E&O review.",
+      "flag": "UNINSURED_SUBCONTRACTOR_EXPOSURE"
+    },
+    {
+      "claim_id": "CLM-2024-0098",
+      "date": "2024-02-14",
+      "type": "general_liability_property_damage",
+      "description": "Crew damaged a neighboring property's fence and irrigation system during ADU foundation excavation.",
+      "status": "PAID",
+      "paid_amount": 18400,
+      "reserve": 0,
+      "broker_action": "Standard claim. No coverage issues."
+    }
+  ],
+  "risk_flags": [
+    {
+      "flag": "UNINSURED_SUBCONTRACTOR_EXPOSURE",
+      "date_added": "2023-09-15",
+      "description": "Client routinely uses subcontractors without verifying certificates of insurance or requiring additional-insured status. The 2023 claim was denied on this basis and no process change has been implemented since.",
+      "severity": "CRITICAL",
+      "status": "UNRESOLVED"
+    },
+    {
+      "flag": "COMPLETED_OPS_GAP",
+      "date_added": "2024-03-01",
+      "description": "Completed operations coverage has not been reviewed since 2021. Given the increase in remodel volume, the completed-operations exposure tail has grown without a corresponding limit review.",
+      "severity": "MEDIUM",
+      "status": "UNRESOLVED"
+    }
+  ]
+}

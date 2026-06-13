@@ -74,6 +74,20 @@ POLICY_ID_TO_TYPE = {
     "UMBRELLA-WBASNY":"umbrella",
 }
 
+# Default industry per indexed policy — used to pre-fill the Coverage Audit picker.
+# Policies tied to a demo client (see DEMO-CLIENT-002/003) use that client's industry.
+POLICY_ID_TO_INDUSTRY = {
+    "CA0001-2010":    "trucking",
+    "CA0001-2013":    "trucking",        # DEMO-CLIENT-001 — Meridian Freight Solutions
+    "CG0001-2007":    "construction",
+    "CG0001-2013":    "construction",    # DEMO-CLIENT-002 — Sonoma Builders Group
+    "WC000000C":      "warehousing",     # DEMO-CLIENT-003 — Cascade Distribution Partners
+    "WC-STATEFUND":   "construction",
+    "UMBRELLA-WBASNY":"any",
+}
+
+POLICY_TYPES = ["commercial_auto", "general_liability", "claims_made", "workers_comp", "umbrella"]
+
 def show_policies():
     print("\nAvailable policies in AI Search:\n")
     result = list_indexed_policies()

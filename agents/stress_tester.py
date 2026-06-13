@@ -491,6 +491,35 @@ def retrieve_client_history(client_id: str) -> dict:
         return {"found": False, "message": f"No history found for client {client_id}: {str(e)}"}
 
 
+def list_client_histories() -> dict:
+    """Returns a summary of every client record in the client-history container —
+    used to populate client pickers in the UI. Reads each blob's top-level fields only."""
+    from azure.storage.blob import BlobServiceClient
+    blob_service = BlobServiceClient.from_connection_string(
+        os.getenv("AZURE_STORAGE_CONNECTION_STRING")
+    )
+    container = blob_service.get_container_client("client-history")
+
+    clients = []
+    for blob in container.list_blobs():
+        if not blob.name.endswith(".json"):
+            continue
+        data = json.loads(container.download_blob(blob.name).readall())
+        subject_policy = data["policy_history"][0]
+        clients.append({
+            "client_id": data["client_id"],
+            "client_name": data["client_name"],
+            "industry": data["industry"],
+            "primary_policy_type": data["primary_policy_type"],
+            "policy_id": subject_policy["policy_id"],
+            "carrier": subject_policy["carrier"],
+            "annual_premium": data["annual_premium"],
+        })
+
+    clients.sort(key=lambda c: c["client_id"])
+    return {"count": len(clients), "clients": clients}
+
+
 def list_indexed_policies() -> dict:
     """Returns all unique policy IDs currently in the policy-docs index."""
     results = list(policy_search.search(
@@ -506,6 +535,19 @@ def list_indexed_policies() -> dict:
 
     policies = [{"policy_id": k, "form_number": v} for k, v in seen.items()]
     return {"count": len(policies), "policies": policies}
+
+
+def get_policy_chunks(policy_id: str, top: int = 200) -> dict:
+    """Returns every indexed chunk for a policy_id, as stored — raw, unranked,
+    no relevance scoring or aggregation. Used by the Data Explorer UI to show
+    exactly what the agent's retrieve_policy_clauses searches over."""
+    results = list(policy_search.search(
+        search_text="*",
+        filter=f"policy_id eq '{policy_id}'",
+        top=top,
+        select=["content", "section_type", "policy_id", "form_number", "page_number"]
+    ))
+    return {"count": len(results), "chunks": results}
 
 
 def dispatch_tool(tool_name: str, tool_input: dict) -> dict:
@@ -701,8 +743,15 @@ def run_coverage_audit(policy_id: str, policy_type: str,
         os.path.join(os.path.dirname(__file__), "..", "prompts", "stress_test_system.txt")
     ).read()
 
-    client_id = client_id or "DEMO-CLIENT-001"
-    client_id_hint = f"CLIENT ID: {client_id}"
+    if client_id:
+        client_id_hint = f"CLIENT ID: {client_id}"
+        client_history_line = f'  - retrieve_client_history(client_id="{client_id}")'
+    else:
+        client_id_hint = "CLIENT ID: none — no client record is linked to this policy"
+        client_history_line = (
+            "  - (no client record is linked to this policy — skip retrieve_client_history "
+            "and base personalization only on what the policy itself says)"
+        )
 
     user_message = f"""MODE 1 — COVERAGE AUDIT
 
@@ -713,10 +762,10 @@ POLICY TYPE: {policy_type}
 INSURED INDUSTRY: {industry}
 {client_id_hint}
 
-STEP 1 — Load context (call all four in parallel if possible):
+STEP 1 — Load context (call in parallel where possible):
   - load_playbook(policy_type="{policy_type}")
   - retrieve_risk_patterns(scenario_type="{policy_type}", industry="{industry}")
-  - retrieve_client_history(client_id="{client_id}")
+{client_history_line}
   - retrieve_eo_claims(policy_type="{policy_type}", industry="{industry}")
 
 STEP 2 — Get market intelligence. For each candidate coverage_area surfaced by the risk

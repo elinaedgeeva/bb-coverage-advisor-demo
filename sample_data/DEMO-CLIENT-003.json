@@ -1,0 +1,67 @@
+{
+  "client_id": "DEMO-CLIENT-003",
+  "client_name": "Cascade Distribution Partners",
+  "industry": "warehousing",
+  "years_as_client": 9,
+  "annual_premium": 96300,
+  "primary_policy_type": "workers_comp",
+  "employee_count": 62,
+  "policy_history": [
+    {
+      "policy_year": "2024-2025",
+      "carrier": "State Compensation Insurance Fund",
+      "policy_id": "WC000000C",
+      "premium": 96300,
+      "experience_modifier": 1.18,
+      "classification_codes": ["8018 - Warehouse Operations", "8810 - Clerical"],
+      "renewal_notes": "Experience modifier increased from 1.04 to 1.18 due to 2023 claims activity. Forklift fleet expanded from 4 to 7 units."
+    },
+    {
+      "policy_year": "2023-2024",
+      "carrier": "State Compensation Insurance Fund",
+      "premium": 81700,
+      "experience_modifier": 1.04,
+      "classification_codes": ["8018 - Warehouse Operations", "8810 - Clerical"],
+      "renewal_notes": "Clean renewal."
+    }
+  ],
+  "claims_history": [
+    {
+      "claim_id": "CLM-2023-0710",
+      "date": "2023-06-19",
+      "type": "workers_comp_injury",
+      "description": "Forklift operator suffered a lower back injury while lifting a pallet manually after a forklift malfunction. No forklift operator certification was on file for this employee.",
+      "status": "PAID",
+      "paid_amount": 71500,
+      "reserve": 12000,
+      "broker_action": "Claim paid. During claim review the carrier flagged the lack of a documented forklift certification program as a future audit risk.",
+      "flag": "MISSING_FORKLIFT_CERTIFICATION_PROGRAM"
+    },
+    {
+      "claim_id": "CLM-2024-0205",
+      "date": "2024-04-02",
+      "type": "workers_comp_injury",
+      "description": "Warehouse associate slipped on a wet floor near the loading dock with no wet-floor signage present, resulting in a sprained ankle and 3 weeks of lost time.",
+      "status": "PAID",
+      "paid_amount": 8900,
+      "reserve": 0,
+      "broker_action": "Standard claim. Carrier noted this is the second slip-and-fall at this loading dock location in 18 months during the loss-run review."
+    }
+  ],
+  "risk_flags": [
+    {
+      "flag": "MISSING_FORKLIFT_CERTIFICATION_PROGRAM",
+      "date_added": "2023-07-01",
+      "description": "No documented forklift operator certification or training program exists despite the fleet expanding to 7 units. The 2023 claim involved an uncertified operator. OSHA 1910.178(l) requires certification, creating exposure for both workers comp severity and potential penalties.",
+      "severity": "CRITICAL",
+      "status": "UNRESOLVED"
+    },
+    {
+      "flag": "EXPERIENCE_MOD_TREND",
+      "date_added": "2024-05-01",
+      "description": "Experience modifier has trended up from 1.04 to 1.18 over two consecutive years. Two slip-and-fall incidents at the same loading dock location suggest an unaddressed facility hazard.",
+      "severity": "HIGH",
+      "status": "UNRESOLVED"
+    }
+  ]
+}
