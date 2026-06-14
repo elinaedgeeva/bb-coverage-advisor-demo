@@ -1,5 +1,5 @@
 """
-B&B Coverage Advisor — Demo UI
+Insurance Broker Coverage Advisor — Demo UI
 -------------------------------
 Thin reference client for the coverage stress-test agent. Calls the same
 Python engine that's deployed as an Azure Function (function_app.py).
@@ -46,7 +46,7 @@ from agents.stress_tester import (
 from run_test import SCENARIOS, POLICY_ID_TO_TYPE, POLICY_ID_TO_INDUSTRY, POLICY_TYPES
 from indexing.index_policy import index_policy
 
-st.set_page_config(page_title="B&B Coverage Advisor", page_icon="🛡️", layout="centered")
+st.set_page_config(page_title="Insurance Broker Coverage Advisor", page_icon="🛡️", layout="centered")
 
 # Lightweight shared-password gate — this app is public and makes live calls
 # to paid Claude / Azure services, so we don't want it wide open to anyone
@@ -58,7 +58,7 @@ except Exception:
     _app_password = "sunflower"
 
 if not st.session_state.get("authenticated"):
-    st.title("🛡️ B&B Coverage Advisor")
+    st.title("🛡️ Insurance Broker Coverage Advisor")
     with st.form("login_form"):
         pw = st.text_input("Password", type="password")
         submitted = st.form_submit_button("Enter", type="primary")
@@ -70,7 +70,7 @@ if not st.session_state.get("authenticated"):
             st.error("Incorrect password.")
     st.stop()
 
-st.title("🛡️ B&B Coverage Advisor")
+st.title("🛡️ Insurance Broker Coverage Advisor")
 st.caption(
     "AI-powered coverage stress testing — every finding is grounded in retrieved policy "
     "language, this client's actual history, and institutional risk patterns."
