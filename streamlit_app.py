@@ -59,8 +59,10 @@ except Exception:
 
 if not st.session_state.get("authenticated"):
     st.title("🛡️ B&B Coverage Advisor")
-    pw = st.text_input("Password", type="password")
-    if pw:
+    with st.form("login_form"):
+        pw = st.text_input("Password", type="password")
+        submitted = st.form_submit_button("Enter", type="primary")
+    if submitted:
         if pw == _app_password:
             st.session_state["authenticated"] = True
             st.rerun()
@@ -81,6 +83,8 @@ SEVERITY_ICON = {"high": "🔴", "medium": "🟡", "low": "🟢",
 INDUSTRIES = ["any", "trucking", "construction", "professional_services", "manufacturing",
               "retail", "agriculture", "real_estate", "hospitality", "healthcare", "warehousing"]
 
+UPLOAD_LABEL = "➕ Upload new policy..."
+
 
 @st.cache_data(ttl=300)
 def get_clients():
@@ -97,132 +101,314 @@ def get_client_record(client_id):
     return retrieve_client_history(client_id)["client"]
 
 
-mode = st.sidebar.radio(
-    "Mode",
-    ["Scenario Stress Test", "Coverage Audit", "Data Explorer", "Upload New Policy"],
-)
-st.sidebar.divider()
-st.sidebar.markdown(
-    "**Architecture note**\n\n"
-    "This UI is a thin client over the same Azure Function deployed at "
-    "`bb-coverage-stress-tester.azurewebsites.net`. The Copilot Studio "
-    "connector and Adaptive Card are built and ready to import — same "
-    "API contract, different front door."
-)
+def policy_and_client_picker(key_prefix: str):
+    """Shared client + policy picker used by both Coverage Risk Audit and
+    Scenario Stress Test. The policy list is pre-filtered to default to the
+    selected client's policy, but any indexed policy can be chosen, and a
+    brand new policy can be uploaded + indexed inline.
 
-# ── Scenario Stress Test ──────────────────────────────────────────────
-if mode == "Scenario Stress Test":
+    Returns (client_record_or_None, policy_id_or_None).
+    """
     clients = get_clients()
-    options = {f"{c['client_name']} — {c['policy_id']} ({c['client_id']})": c for c in clients}
-    label = st.selectbox("Client", list(options.keys()))
-    client_summary = options[label]
-    client_id = client_summary["client_id"]
-    client = get_client_record(client_id)
-    policy = client["policy_history"][0]
-
-    with st.container(border=True):
-        st.markdown(f"### 📁 {client['client_name']}")
-        c1, c2, c3, c4 = st.columns(4)
-        c1.metric("Policy", policy["policy_id"])
-        c2.metric("Carrier", policy["carrier"])
-        c3.metric("Industry", client["industry"].replace("_", " ").title())
-        c4.metric("Annual Premium", f"${client['annual_premium']:,}")
-
-    st.subheader("Scenario Stress Test")
-    st.write(
-        f"Describe a claim scenario — the agent checks it against **{client['client_name']}'s** "
-        f"actual policy ({policy['policy_id']}) and claims history, and surfaces coverage gaps, "
-        f"exclusions, and ambiguities."
-    )
-
-    if client_id == "DEMO-CLIENT-001":
-        preset_options = ["Custom"] + [f"{k}. {v['label']}" for k, v in SCENARIOS.items()]
-    else:
-        preset_options = ["Custom"]
-        st.caption(
-            "The preset demo scenarios were written for Meridian Freight (DEMO-CLIENT-001). "
-            "For this client, describe a custom scenario relevant to their policy/industry."
-        )
-
-    preset = st.selectbox("Demo scenario", preset_options)
-
-    if preset == "Custom":
-        scenario = st.text_area(
-            "Scenario description", height=120,
-            placeholder="e.g. A subcontractor's crew damages a client's existing structure "
-                        "while working on an addition — does coverage respond?",
-        )
-    else:
-        key = preset.split(".")[0]
-        s = SCENARIOS[key]
-        scenario = st.text_area("Scenario description", value=s["scenario"], height=120)
-
-    run = st.button("Run Stress Test", type="primary")
-
-    if run:
-        with st.spinner(
-            f"Agent is checking {client['client_name']}'s history, policy language, "
-            "and risk patterns..."
-        ):
-            result = run_stress_test(scenario=scenario, client_id=client_id, verbose=False)
-        st.session_state["result"] = result
-        st.session_state["result_type"] = "scenario"
-
-# ── Coverage Audit ─────────────────────────────────────────────────────
-elif mode == "Coverage Audit":
     policies = get_policies()
-    clients = get_clients()
-    policy_to_client = {c["policy_id"]: c for c in clients}
 
-    options = {f"{p['policy_id']} ({p['form_number']})": p for p in policies}
-    label = st.selectbox("Policy to audit", list(options.keys()))
-    selected = options[label]
-    policy_id = selected["policy_id"]
+    client_choices = ["— No client (generic policy) —"] + [
+        f"{c['client_name']} — {c['policy_id']} ({c['client_id']})" for c in clients
+    ]
+    client_choice = st.selectbox("Client", client_choices, key=f"{key_prefix}_client")
 
-    default_type = POLICY_ID_TO_TYPE.get(policy_id, "general_liability")
-    default_industry = POLICY_ID_TO_INDUSTRY.get(policy_id, "any")
-    linked_client = policy_to_client.get(policy_id)
+    client = None
+    if client_choice != client_choices[0]:
+        client = get_client_record(clients[client_choices.index(client_choice) - 1]["client_id"])
 
-    if linked_client:
+    policy_labels = {f"{p['policy_id']} ({p['form_number']})": p["policy_id"] for p in policies}
+    policy_label_by_id = {v: k for k, v in policy_labels.items()}
+
+    # When the client changes, snap the policy picker to that client's policy
+    # by writing directly into session_state before the widget is created —
+    # this is the reliable way to programmatically change a selectbox's value.
+    prev_client_key = f"{key_prefix}_prev_client"
+    if st.session_state.get(prev_client_key) != client_choice:
+        st.session_state[prev_client_key] = client_choice
+        if client:
+            subj_id = client["policy_history"][0]["policy_id"]
+            if subj_id in policy_label_by_id:
+                st.session_state[f"{key_prefix}_policy"] = policy_label_by_id[subj_id]
+
+    policy_choices = list(policy_labels.keys()) + [UPLOAD_LABEL]
+    policy_choice = st.selectbox("Policy", policy_choices, key=f"{key_prefix}_policy")
+
+    if policy_choice == UPLOAD_LABEL:
+        st.markdown("##### Upload a new policy")
         st.caption(
-            f"📁 Linked client: **{linked_client['client_name']}** "
-            f"({linked_client['client_id']}) — audit will also use their claims/risk history"
+            "Runs the same Document Intelligence + embedding pipeline used for the "
+            "existing policies. Once indexed, it's immediately available here."
         )
-    else:
-        st.caption(
-            "No client record is linked to this policy — audit will rely on policy "
-            "language, playbook, and market intelligence only."
+        uploaded = st.file_uploader("Policy PDF", type=["pdf"], key=f"{key_prefix}_upload")
+        c1, c2 = st.columns(2)
+        new_policy_id = c1.text_input("Policy ID", placeholder="e.g. CA0001-2019", key=f"{key_prefix}_new_id")
+        new_form_number = c2.text_input("Form number", placeholder="e.g. CA-00-01-09-19", key=f"{key_prefix}_new_form")
+
+        if st.button("Index Policy", key=f"{key_prefix}_index_btn", disabled=not uploaded):
+            if not new_policy_id:
+                st.error("Policy ID is required.")
+            else:
+                with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp:
+                    tmp.write(uploaded.read())
+                    tmp_path = tmp.name
+                try:
+                    with st.spinner(
+                        "Extracting text with Document Intelligence, embedding, and uploading "
+                        "to AI Search — this can take a minute..."
+                    ):
+                        chunk_count = index_policy(
+                            pdf_path=tmp_path,
+                            policy_id=new_policy_id,
+                            form_number=new_form_number or "UNKNOWN",
+                        )
+                    get_policies.clear()
+                    st.session_state[f"{key_prefix}_policy"] = (
+                        f"{new_policy_id} ({new_form_number or 'UNKNOWN'})"
+                    )
+                    st.success(f"Indexed {new_policy_id} — {chunk_count} chunks added to AI Search.")
+                    st.rerun()
+                finally:
+                    os.unlink(tmp_path)
+        return client, None
+
+    return client, policy_labels[policy_choice]
+
+
+def render_audit_result(result: dict):
+    st.divider()
+    if result.get("error"):
+        st.error(result["error"])
+        return
+
+    st.markdown("### Coverage Audit Report")
+    st.write(result.get("summary", ""))
+
+    for r in result.get("risks", []):
+        sev = (r.get("severity") or "").lower()
+        label = f"{SEVERITY_ICON.get(sev, '⚪')} #{r.get('rank')} [{r.get('severity')}] {r.get('risk_title')}"
+        with st.expander(label):
+            st.markdown(f"**E&O Frequency:** {r.get('eo_frequency', 'unknown')}")
+            st.markdown(f"**What could go wrong:** {r.get('what_could_go_wrong', '')}")
+            st.markdown(f"**Fix:** {r.get('fix', '')}")
+
+    actions = result.get("immediate_actions", [])
+    if actions:
+        st.markdown("#### Immediate Actions")
+        for a in actions:
+            st.write(f"- {a}")
+
+    with st.expander("Raw JSON response"):
+        st.json(result)
+
+
+def render_scenario_result(result: dict):
+    st.divider()
+    if result.get("error"):
+        st.error(result["error"])
+        return
+
+    verdict = result.get("verdict", "UNKNOWN")
+    confidence = result.get("confidence", 0)
+
+    st.markdown(f"### {VERDICT_ICON.get(verdict, '⚪')} Verdict: **{verdict}**")
+    st.progress(min(max(confidence, 0.0), 1.0), text=f"Confidence: {int(confidence * 100)}%")
+
+    if result.get("scenario_summary"):
+        st.write(result["scenario_summary"])
+
+    findings = result.get("findings", [])
+    if findings:
+        st.markdown("#### Findings")
+        for f in findings:
+            sev = (f.get("severity") or "").lower()
+            label = f"{SEVERITY_ICON.get(sev, '⚪')} [{f.get('severity', '').upper()}] {f.get('clause_reference', '')}"
+            with st.expander(label):
+                if f.get("policy_language"):
+                    st.markdown(f"**Policy language:** {f['policy_language']}")
+                st.markdown(f"**Implication:** {f.get('implication', '')}")
+
+    if result.get("recommended_action"):
+        st.markdown("#### Recommended Action")
+        st.info(result["recommended_action"])
+
+    if result.get("human_review_required"):
+        st.markdown("#### ⚠️ Human Review Required")
+        st.warning(result.get("human_review_reason", ""))
+
+    if result.get("knowledge_gaps"):
+        with st.expander("Knowledge gaps"):
+            st.write(result["knowledge_gaps"])
+
+    # ── Human-in-the-loop decision ──────────────────────────────
+    st.divider()
+    st.markdown("#### Broker Decision")
+    c1, c2, c3 = st.columns(3)
+    decision = None
+    if c1.button("✅ Accept", use_container_width=True, key="scenario_accept"):
+        decision = "accept"
+    if c2.button("🚩 Flag for Review", use_container_width=True, key="scenario_flag"):
+        decision = "flag_for_review"
+    if c3.button("⚖️ Escalate to Attorney", use_container_width=True, key="scenario_escalate"):
+        decision = "escalate_attorney"
+
+    if decision:
+        st.session_state.setdefault("decision_log", []).append(
+            {
+                "scenario": (result.get("scenario_summary") or "")[:80],
+                "verdict": verdict,
+                "decision": decision,
+            }
+        )
+        st.success(f"Decision logged: **{decision}**")
+
+    with st.expander("Raw JSON response"):
+        st.json(result)
+
+    if st.session_state.get("decision_log"):
+        st.divider()
+        st.markdown("#### Decision Log (this session)")
+        st.table(st.session_state["decision_log"])
+
+
+top_tabs = st.tabs(["Stress Test Policy", "Data Explorer"])
+
+# ── Stress Test Policy ──────────────────────────────────────────────────
+with top_tabs[0]:
+    sub_tabs = st.tabs(["Coverage Risk Audit", "Scenario Stress Test"])
+
+    # ── Coverage Risk Audit ──
+    with sub_tabs[0]:
+        st.subheader("Coverage Risk Audit")
+        st.write(
+            "Proactively review a policy for gaps before binding or renewal — grounded "
+            "in claims history, E&O loss data, and carrier enforcement patterns."
         )
 
-    c1, c2 = st.columns(2)
-    policy_type = c1.selectbox(
-        "Policy type", POLICY_TYPES,
-        index=POLICY_TYPES.index(default_type) if default_type in POLICY_TYPES else 0,
-    )
-    industry = c2.text_input("Industry", value=default_industry)
+        client, policy_id = policy_and_client_picker("audit")
 
-    st.subheader("Coverage Audit")
-    st.write(
-        f"Proactively review **{policy_id}** for gaps before binding or renewal — grounded in "
-        "claims history, E&O loss data, and carrier enforcement patterns."
-    )
-
-    run = st.button(f"Run Audit — {policy_id}", type="primary")
-
-    if run:
-        with st.spinner(f"Agent is auditing {policy_id}..."):
-            result = run_coverage_audit(
-                policy_id=policy_id,
-                policy_type=policy_type,
-                industry=industry,
-                client_id=linked_client["client_id"] if linked_client else None,
-                verbose=False,
+        if policy_id:
+            default_type = (
+                client["primary_policy_type"] if client
+                else POLICY_ID_TO_TYPE.get(policy_id, "general_liability")
             )
-        st.session_state["result"] = result
-        st.session_state["result_type"] = "audit"
+            default_industry = (
+                client["industry"] if client
+                else POLICY_ID_TO_INDUSTRY.get(policy_id, "any")
+            )
+
+            # When the selected policy changes, snap policy type / industry to
+            # that policy's (or client's) defaults.
+            if st.session_state.get("audit_prev_policy") != policy_id:
+                st.session_state["audit_prev_policy"] = policy_id
+                st.session_state["audit_policy_type"] = (
+                    default_type if default_type in POLICY_TYPES else "general_liability"
+                )
+                st.session_state["audit_industry"] = default_industry
+
+            if client:
+                st.caption(
+                    f"📁 Linked client: **{client['client_name']}** "
+                    f"({client['client_id']}) — audit will also use their claims/risk history"
+                )
+            else:
+                st.caption(
+                    "No client selected — audit will rely on policy language, playbook, "
+                    "and market intelligence only."
+                )
+
+            c1, c2 = st.columns(2)
+            policy_type = c1.selectbox("Policy type", POLICY_TYPES, key="audit_policy_type")
+            industry = c2.text_input("Industry", key="audit_industry")
+
+            if st.button(f"Run Audit — {policy_id}", type="primary", key="audit_run"):
+                with st.spinner(f"Agent is auditing {policy_id}..."):
+                    result = run_coverage_audit(
+                        policy_id=policy_id,
+                        policy_type=policy_type,
+                        industry=industry,
+                        client_id=client["client_id"] if client else None,
+                        verbose=False,
+                    )
+                st.session_state["audit_result"] = result
+
+        if "audit_result" in st.session_state:
+            render_audit_result(st.session_state["audit_result"])
+
+    # ── Scenario Stress Test ──
+    with sub_tabs[1]:
+        st.subheader("Scenario Stress Test")
+        st.write(
+            "Describe a claim scenario — the agent checks it against the selected "
+            "client's actual policy and claims history, and surfaces coverage gaps, "
+            "exclusions, and ambiguities."
+        )
+
+        client, policy_id = policy_and_client_picker("scenario")
+
+        if client is None:
+            st.warning(
+                "Select a client to run a scenario stress test — the agent evaluates "
+                "scenarios against a specific client's policy and claims history."
+            )
+        else:
+            policy = client["policy_history"][0]
+            subj_policy_id = policy["policy_id"]
+
+            if policy_id and policy_id != subj_policy_id:
+                st.caption(
+                    f"Note: the scenario is evaluated against **{client['client_name']}'s** "
+                    f"policy on file ({subj_policy_id}), regardless of the policy selected above."
+                )
+
+            with st.container(border=True):
+                st.markdown(f"### 📁 {client['client_name']}")
+                c1, c2, c3, c4 = st.columns(4)
+                c1.metric("Policy", policy["policy_id"])
+                c2.metric("Carrier", policy["carrier"])
+                c3.metric("Industry", client["industry"].replace("_", " ").title())
+                c4.metric("Annual Premium", f"${client['annual_premium']:,}")
+
+            client_id = client["client_id"]
+            if client_id == "DEMO-CLIENT-001":
+                preset_options = ["Custom"] + [f"{k}. {v['label']}" for k, v in SCENARIOS.items()]
+            else:
+                preset_options = ["Custom"]
+                st.caption(
+                    "The preset demo scenarios were written for Meridian Freight (DEMO-CLIENT-001). "
+                    "For this client, describe a custom scenario relevant to their policy/industry."
+                )
+
+            preset = st.selectbox("Demo scenario", preset_options, key="scenario_preset")
+
+            if preset == "Custom":
+                scenario = st.text_area(
+                    "Scenario description", height=120, key="scenario_text",
+                    placeholder="e.g. A subcontractor's crew damages a client's existing structure "
+                                "while working on an addition — does coverage respond?",
+                )
+            else:
+                key = preset.split(".")[0]
+                s = SCENARIOS[key]
+                scenario = st.text_area("Scenario description", value=s["scenario"], height=120, key="scenario_text_preset")
+
+            if st.button("Run Stress Test", type="primary", key="scenario_run"):
+                with st.spinner(
+                    f"Agent is checking {client['client_name']}'s history, policy language, "
+                    "and risk patterns..."
+                ):
+                    result = run_stress_test(scenario=scenario, client_id=client_id, verbose=False)
+                st.session_state["scenario_result"] = result
+
+        if "scenario_result" in st.session_state:
+            render_scenario_result(st.session_state["scenario_result"])
 
 # ── Data Explorer ────────────────────────────────────────────────────
-elif mode == "Data Explorer":
+with top_tabs[1]:
     st.subheader("Data Explorer — what the agent actually sees")
     st.write(
         "Raw records from the knowledge layer the agent grounds its reasoning in. "
@@ -369,133 +555,3 @@ elif mode == "Data Explorer":
             st.dataframe(result["sample_decisions"], use_container_width=True)
         else:
             st.info(result.get("message"))
-
-# ── Upload New Policy ───────────────────────────────────────────────
-else:
-    st.subheader("Upload New Policy")
-    st.write(
-        "Upload a policy PDF to index it into AI Search — the same Document Intelligence "
-        "+ embedding pipeline used for the existing policies (`indexing/index_policy.py`). "
-        "Once indexed, it's immediately available in the Coverage Audit picker."
-    )
-
-    uploaded = st.file_uploader("Policy PDF", type=["pdf"])
-    c1, c2 = st.columns(2)
-    policy_id = c1.text_input("Policy ID", placeholder="e.g. CA0001-2019")
-    form_number = c2.text_input("Form number", placeholder="e.g. CA-00-01-09-19")
-
-    if st.button("Index Policy", type="primary", disabled=not uploaded):
-        if not policy_id:
-            st.error("Policy ID is required.")
-        else:
-            with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp:
-                tmp.write(uploaded.read())
-                tmp_path = tmp.name
-            try:
-                with st.spinner(
-                    "Extracting text with Document Intelligence, embedding, and uploading "
-                    "to AI Search — this can take a minute..."
-                ):
-                    chunk_count = index_policy(
-                        pdf_path=tmp_path,
-                        policy_id=policy_id,
-                        form_number=form_number or "UNKNOWN",
-                    )
-                get_policies.clear()
-                st.success(
-                    f"Indexed {policy_id} — {chunk_count} chunks added to AI Search. "
-                    "It's now available in the Coverage Audit picker."
-                )
-            finally:
-                os.unlink(tmp_path)
-
-# ── Results ──────────────────────────────────────────────────────────
-if mode in ("Scenario Stress Test", "Coverage Audit") and "result" in st.session_state:
-    result = st.session_state["result"]
-    st.divider()
-
-    if result.get("error"):
-        st.error(result["error"])
-
-    elif st.session_state["result_type"] == "scenario":
-        verdict = result.get("verdict", "UNKNOWN")
-        confidence = result.get("confidence", 0)
-
-        st.markdown(f"### {VERDICT_ICON.get(verdict, '⚪')} Verdict: **{verdict}**")
-        st.progress(min(max(confidence, 0.0), 1.0), text=f"Confidence: {int(confidence * 100)}%")
-
-        if result.get("scenario_summary"):
-            st.write(result["scenario_summary"])
-
-        findings = result.get("findings", [])
-        if findings:
-            st.markdown("#### Findings")
-            for f in findings:
-                sev = (f.get("severity") or "").lower()
-                label = f"{SEVERITY_ICON.get(sev, '⚪')} [{f.get('severity', '').upper()}] {f.get('clause_reference', '')}"
-                with st.expander(label):
-                    if f.get("policy_language"):
-                        st.markdown(f"**Policy language:** {f['policy_language']}")
-                    st.markdown(f"**Implication:** {f.get('implication', '')}")
-
-        if result.get("recommended_action"):
-            st.markdown("#### Recommended Action")
-            st.info(result["recommended_action"])
-
-        if result.get("human_review_required"):
-            st.markdown("#### ⚠️ Human Review Required")
-            st.warning(result.get("human_review_reason", ""))
-
-        if result.get("knowledge_gaps"):
-            with st.expander("Knowledge gaps"):
-                st.write(result["knowledge_gaps"])
-
-        # ── Human-in-the-loop decision ──────────────────────────────
-        st.divider()
-        st.markdown("#### Broker Decision")
-        c1, c2, c3 = st.columns(3)
-        decision = None
-        if c1.button("✅ Accept", use_container_width=True):
-            decision = "accept"
-        if c2.button("🚩 Flag for Review", use_container_width=True):
-            decision = "flag_for_review"
-        if c3.button("⚖️ Escalate to Attorney", use_container_width=True):
-            decision = "escalate_attorney"
-
-        if decision:
-            st.session_state.setdefault("decision_log", []).append(
-                {
-                    "scenario": (result.get("scenario_summary") or "")[:80],
-                    "verdict": verdict,
-                    "decision": decision,
-                }
-            )
-            st.success(f"Decision logged: **{decision}**")
-
-    else:  # audit
-        st.markdown("### Coverage Audit Report")
-        st.write(result.get("summary", ""))
-
-        risks = result.get("risks", [])
-        for r in risks:
-            sev = (r.get("severity") or "").lower()
-            label = f"{SEVERITY_ICON.get(sev, '⚪')} #{r.get('rank')} [{r.get('severity')}] {r.get('risk_title')}"
-            with st.expander(label):
-                st.markdown(f"**E&O Frequency:** {r.get('eo_frequency', 'unknown')}")
-                st.markdown(f"**What could go wrong:** {r.get('what_could_go_wrong', '')}")
-                st.markdown(f"**Fix:** {r.get('fix', '')}")
-
-        actions = result.get("immediate_actions", [])
-        if actions:
-            st.markdown("#### Immediate Actions")
-            for a in actions:
-                st.write(f"- {a}")
-
-    with st.expander("Raw JSON response"):
-        st.json(result)
-
-# ── Decision log ─────────────────────────────────────────────────────
-if st.session_state.get("decision_log"):
-    st.divider()
-    st.markdown("#### Decision Log (this session)")
-    st.table(st.session_state["decision_log"])
