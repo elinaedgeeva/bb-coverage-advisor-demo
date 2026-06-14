@@ -1,0 +1,26 @@
+# Build/venv artifacts (deps are installed by the remote Oryx build)
+.git/
+.venv/
+.python_packages/
+__pycache__/
+*.pyc
+
+# Local secrets / settings — must NOT be deployed
+.env
+local.settings.json
+streamlit_secrets.toml
+
+# Streamlit app + its log (log is locked while Streamlit runs) — not part of the Function App
+streamlit_app.py
+streamlit_log.txt
+
+# Local scratch / test / planning files
+run_test.py
+last_result.json
+latest_context_claude.txt
+PLAN.md
+*.tmp.*
+
+# Demo data and design docs not needed at runtime
+sample_data/
+copilot_studio/

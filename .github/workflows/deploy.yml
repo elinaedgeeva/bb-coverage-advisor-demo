@@ -1,0 +1,52 @@
+name: Deploy to Azure Functions
+
+# CI/CD for the Insurance Broker stress-tester Function App.
+# Push to main -> GitHub builds the deps (remote Oryx build on Azure) -> deploy -> smoke test.
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:        # lets you trigger a deploy manually from the Actions tab
+
+env:
+  AZURE_FUNCTIONAPP_NAME: bb-coverage-stress-tester
+  AZURE_FUNCTIONAPP_PACKAGE_PATH: '.'   # repo root IS the function project
+  PYTHON_VERSION: '3.11'                # must match the Function App's runtime
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python ${{ env.PYTHON_VERSION }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Deploy to Azure Functions (remote build installs dependencies)
+        uses: Azure/functions-action@v1
+        with:
+          app-name: ${{ env.AZURE_FUNCTIONAPP_NAME }}
+          package: ${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}
+          publish-profile: ${{ secrets.AZURE_FUNCTIONAPP_PUBLISH_PROFILE }}
+          scm-do-build-during-deployment: true
+          enable-oryx-build: true
+
+      - name: Smoke test (drift detector)
+        shell: bash
+        run: |
+          echo "Waiting for the app to warm up..."
+          sleep 45
+          URL="https://${{ env.AZURE_FUNCTIONAPP_NAME }}.azurewebsites.net/api/stress_test"
+          # No key sent on purpose: a healthy host returns 401 (auth required),
+          # a dead host returns 503. We only fail the deploy on 5xx.
+          CODE=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$URL" \
+                 -H "Content-Type: application/json" -d '{}' --max-time 30)
+          echo "Health probe HTTP status: $CODE"
+          if [ "$CODE" -ge 500 ]; then
+            echo "::error::App returned $CODE — deployment is unhealthy (host failed to start)."
+            exit 1
+          fi
+          echo "Host is alive (status $CODE). Deploy looks healthy."
